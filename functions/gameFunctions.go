@@ -1,7 +1,7 @@
 package functions
 
 import (
-	. "../modules"
+	. "../models"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
