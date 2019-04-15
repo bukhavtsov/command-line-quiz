@@ -46,6 +46,7 @@ func calculateExpressions(numberCorrectAnswers *int, numberIncorrectAnswers *int
 }
 func getExpressions() (expressions []Expression) {
 	jsonFile, err := os.Open(expressionFile)
+	defer jsonFile.Close()
 	if err != nil {
 		panic(err)
 	}
@@ -56,6 +57,7 @@ func getExpressions() (expressions []Expression) {
 
 func GetRatingList() (ratings []Rating) {
 	jsonFile, err := os.Open(ratingFile)
+	defer jsonFile.Close()
 	if err != nil {
 		panic(err)
 	}
@@ -83,6 +85,7 @@ func addToRating(name string, numberCorrectAnswers int) {
 	}
 	file, err := os.Create(ratingFile)
 	file.WriteString(string(resultRating))
+	defer file.Close()
 	fmt.Println("You has been added to TOP!")
 }
 func isTopFive(numberUserCorrectAnswers int) bool {
