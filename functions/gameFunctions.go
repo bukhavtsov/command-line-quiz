@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"sort"
 	"time"
@@ -16,23 +17,24 @@ const (
 )
 
 func StartGame() {
-	var numberCorrectAnswers int
-	var numberIncorrectAnswers int
-	go calculateExpressions(&numberCorrectAnswers, &numberIncorrectAnswers)
+	var correct int
+	var incorrect int
+	go calculateExpressions(&correct, &incorrect)
 	time.Sleep(time.Minute)
-	if isTopFive(numberCorrectAnswers) {
+	if isTopFive(correct) {
 		fmt.Println("Enter your name:")
 		var name string
 		fmt.Fscan(os.Stdin, &name)
-		addToRating(name, numberCorrectAnswers)
+		addToRating(name, correct)
 	}
 	fmt.Printf("Final result:\n"+
 		"number correct answers = %d\n"+
-		"number Incorrect answers = %d", numberCorrectAnswers, numberIncorrectAnswers)
+		"number Incorrect answers = %d", correct, incorrect)
 }
 
 func calculateExpressions(numberCorrectAnswers *int, numberIncorrectAnswers *int) {
 	expressions := getExpressions()
+	shuffle(expressions)
 	for _, expression := range expressions {
 		var userAnswer string
 		fmt.Println(expression.Value)
@@ -51,7 +53,10 @@ func getExpressions() (expressions []Expression) {
 		panic(err)
 	}
 	jsonByteValue, _ := ioutil.ReadAll(jsonFile)
-	_ = json.Unmarshal(jsonByteValue, &expressions)
+	err = json.Unmarshal(jsonByteValue, &expressions)
+	if err != nil {
+		panic(err)
+	}
 	return
 }
 
@@ -97,4 +102,9 @@ func isTopFive(numberUserCorrectAnswers int) bool {
 		}
 	}
 	return false
+}
+func shuffle(expressions []Expression) {
+	rand.Shuffle(len(expressions), func(i, j int) {
+		expressions[i], expressions[j] = expressions[j], expressions[i]
+	})
 }
