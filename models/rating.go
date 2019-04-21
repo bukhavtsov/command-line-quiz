@@ -1,6 +1,6 @@
 package models
 
 type Rating struct {
-	Name                 string `json:"name"`
-	NumberCorrectAnswers int    `json:"numberCorrectAnswers"`
+	Name    string `json:"name"`
+	Correct int    `json:"numberCorrectAnswers"`
 }
