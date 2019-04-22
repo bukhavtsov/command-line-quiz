@@ -1,9 +1,9 @@
 package main
 
 import (
-	. "../command-line-quiz/models"
 	"encoding/json"
 	"fmt"
+	. "github.com/bukhavtsov/command-line-quiz/models"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -15,6 +15,43 @@ const (
 	expressionFile = "jsons/expressions.json"
 	ratingFile     = "jsons/rating.json"
 )
+
+var expressions []Expression
+var ratings []Rating
+
+func init() {
+	jsonFile, err := os.Open(expressionFile)
+	if err != nil {
+		fmt.Printf("expression file `%s` not found", expressionFile)
+		os.Exit(1)
+	}
+	defer jsonFile.Close()
+	jsonByteValue, err := ioutil.ReadAll(jsonFile)
+	if err != nil {
+		fmt.Printf("failed reading file: %s", err)
+		os.Exit(1)
+	}
+	err = json.Unmarshal(jsonByteValue, &expressions)
+	if err != nil {
+		fmt.Printf("failed reading JSON: %s", err)
+		os.Exit(1)
+	}
+
+	jsonFile, err = os.Open(ratingFile)
+	if err != nil {
+		jsonFile, err = os.Create(expressionFile)
+		if err != nil {
+			fmt.Println("error:", err)
+		}
+		fmt.Printf("expression file `%s` has been created", expressionFile)
+	}
+	jsonByteValue, _ = ioutil.ReadAll(jsonFile)
+	err = json.Unmarshal(jsonByteValue, &ratings)
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+	return
+}
 
 func main() {
 	for {
@@ -31,8 +68,7 @@ func main() {
 			fmt.Println("Let's go!")
 			startGame()
 		case 2:
-			ratingList := getRatingList()
-			fmt.Println(getTopFiveRatings(ratingList))
+			fmt.Println(getTopFiveRatings(ratings))
 		case 3:
 			os.Exit(1)
 		default:
@@ -75,16 +111,15 @@ func startGame() {
 		"----------------\n", correct)
 }
 
-func getRandomExpression(expressions []Expression) Expression {
+func getRandomExpression() Expression {
 	lastIndex := len(expressions) - 1
 	return expressions[rand.Intn(lastIndex)]
 }
 
 func askQuestion(isCorrect chan<- bool, done chan bool) {
-	expressions := getExpressions()
 	go func() {
 		for {
-			expression := getRandomExpression(expressions)
+			expression := getRandomExpression()
 			var userAnswer string
 			fmt.Print(expression.Value, "=")
 			fmt.Scanf("%s\n", &userAnswer)
@@ -102,30 +137,6 @@ func askQuestion(isCorrect chan<- bool, done chan bool) {
 		}
 	}
 }
-func getExpressions() (expressions []Expression) {
-	jsonFile, err := os.Open(expressionFile)
-	defer jsonFile.Close()
-	if err != nil {
-		panic(err)
-	}
-	jsonByteValue, _ := ioutil.ReadAll(jsonFile)
-	err = json.Unmarshal(jsonByteValue, &expressions)
-	if err != nil {
-		panic(err)
-	}
-	return
-}
-
-func getRatingList() (ratings []Rating, err error) {
-	jsonFile, err := os.Open(ratingFile)
-	defer jsonFile.Close()
-	if err != nil {
-		panic(err)
-	}
-	jsonByteValue, _ := ioutil.ReadAll(jsonFile)
-	_ = json.Unmarshal(jsonByteValue, &ratings)
-	return
-}
 func getTopFiveRatings(ratings []Rating) (topFive []Rating) {
 	sort.Slice(ratings, func(i, j int) bool {
 		return ratings[i].Correct > ratings[j].Correct
@@ -137,28 +148,27 @@ func getTopFiveRatings(ratings []Rating) (topFive []Rating) {
 		return ratings
 	}
 }
-func addToRating(name string, correct int) error {
-	previousRating := getRatingList()
-	previousRating = append(previousRating, Rating{Name: name, Correct: correct})
-	resultRating, err := json.Marshal(previousRating)
+func addToRating(name string, correct int) {
+	ratings = append(ratings, Rating{Name: name, Correct: correct})
+	resultRating, err := json.Marshal(ratings)
 	if err != nil {
-		panic(err)
+		fmt.Println("error:", err)
 	}
 	file, err := os.Create(ratingFile)
+	defer file.Close()
 	_, err = file.WriteString(string(resultRating))
 	if err != nil {
-		panic(err)
+		fmt.Printf("%s has't been added to TOP!\n", name)
+		fmt.Println("error:", err)
+		return
 	}
-	file.Close()
 	fmt.Printf("%s has been added to TOP!\n", name)
-	return nil
 }
 func isTopFive(userCorrectAnswers int) bool {
-	ratingList := getRatingList()
-	if len(ratingList) < 5 {
+	if len(ratings) < 5 {
 		return true
 	}
-	topFive := getTopFiveRatings(ratingList)
+	topFive := getTopFiveRatings(ratings)
 	for _, rating := range topFive {
 		if userCorrectAnswers > rating.Correct {
 			return true
